@@ -1,3 +1,15 @@
+# Image files
 *.jpeg
 *.jpg
 *.png
+
+# Python temp files
+*__pycache__/
+
+# Pipenv temp files
+Pipfile.lock
+
+# Weight files
+weights/*
+# keep the last model
+!weights/model_pth 
