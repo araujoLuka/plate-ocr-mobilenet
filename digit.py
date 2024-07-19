@@ -1,13 +1,11 @@
 """Module to extract an alphanumerical digit from a license plate image"""
 
-__all__ = ["Digit"]
 __author__ = "Lucas C. Araujo"
 __version__ = "1.0.0"
 
-# Import the necessary libraries
-from PIL import Image
-import argparse
 import os
+import argparse
+from PIL import Image
 
 class Digit:
     def __init__(self, image_path: str, index: int, plate_length: int = 7, has_hyphen: bool = True):
