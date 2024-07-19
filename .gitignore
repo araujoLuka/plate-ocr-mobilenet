@@ -2,6 +2,7 @@
 *.jpeg
 *.jpg
 *.png
+assets/images/
 
 # Python temp files
 *__pycache__/
