@@ -7,7 +7,7 @@ import os
 import argparse
 from PIL import Image
 
-class Digit:
+class DigitExtractor:
     def __init__(self, image_path: str, index: int, plate_length: int = 7, has_hyphen: bool = True):
         if index < 1 or index > 7:
             raise ValueError("Index must be between 1 and max length"
@@ -31,6 +31,7 @@ class Digit:
     
     @property
     def digit(self) -> Image.Image:
+        """Return the extracted digit"""
         return self.__digit
 
     def save(self, 
@@ -42,7 +43,7 @@ class Digit:
         """Save the digit to a file"""
         if file_path == "" and not gen_path:
             raise ValueError("Please provide a file path")
-        
+
         self.__check_directory(directory)
         
         file_path = os.path.join(directory, file_path) + f".{format}"
@@ -140,7 +141,7 @@ if __name__ == "__main__":
         max_index = length
     
     for i in range(index, max_index + 1):
-        digit = Digit(image_path, i, plate_length=length, has_hyphen=has_hyphen)
+        digit = DigitExtractor(image_path, i, plate_length=length, has_hyphen=has_hyphen)
 
         if args.show:
             digit.show()
