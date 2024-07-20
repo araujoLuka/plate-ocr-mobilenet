@@ -7,8 +7,7 @@ from torch import nn, save, load
 from torchvision.models import MobileNetV3, MobileNet_V3_Small_Weights, WeightsEnum
 from torchvision.models import mobilenetv3
 
-from utils.trainer import Trainer
-weightsDir: str = Trainer.weightsDir
+from utils.weights import *
 
 class LicensePlateModel(MobileNetV3):
     def __init__(
@@ -123,22 +122,15 @@ class LicensePlateModel(MobileNetV3):
         Otherwise, return an empty string.
         """
         # Make a list with all main trained models for each training ID in 'weights'
-        trainings: list = os.listdir(weightsDir)
-        models: list = []
-        for training in trainings:
-            for model in os.listdir(f"{weightsDir}{training}"):
-                if model.endswith(".pth"):
-                    models.append(f"{training}/{model}")
-        
-        print("Trained models found:")
-        for idx, model in enumerate(models):
-            print(f"{idx+1}: {model}")
-        
-        inp: int = int(input("Which model do you want to load? (0 to skip): "))
-        if inp == 0:
+        weights: list = weights_list()
+        path: str = ""
+        ret: int = 0
+        path, ret = weights_select(weights)
+
+        if ret == 1:
             raise Exception("User skipped loading a pre-trained model")
-        if inp < 1 or inp > len(models):
+        
+        if ret == -1:
             raise Exception("Invalid input! Skipping...")
         
-        print(f"Loading model: {models[inp-1]}")
-        return f"{weightsDir}{models[inp-1]}"
+        return path
