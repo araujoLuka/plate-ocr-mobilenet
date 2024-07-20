@@ -9,8 +9,9 @@ import time
 from torch import nn, optim
 from torch.utils.data import DataLoader
 
+from utils.weights import weightsDir
+
 class Trainer:
-    weightsDir: str = __file__.replace("utils/trainer.py","weights/") # $PROJECT_ROOT/weights/
     def __init__(self, 
                  model: nn.Module, 
                  criterion: nn.Module, 
@@ -24,17 +25,29 @@ class Trainer:
         self.__dtype: torch.dtype = dtype
         self.__saveEpochs: bool = False
         self.__trainDir = ""
-        self.trainId: str = self.generateTrainId()
+        self.__trainId: str = self.generateTrainId()
+
+    @property
+    def trainId(self) -> str:
+        return self.__trainId
+
+    @trainId.setter
+    def trainId(self, value: str):
+        self.__trainId = value
+        self.__trainDir = f"{weightsDir}{value}/"
+        if os.path.exists(self.__trainDir):
+            print(f"Train ID {value} already exists! Changing it...")
+            self.trainId = value[:-3] + str(int(value[-3:])+1).zfill(3)
 
     def generateTrainId(self) -> str:
         i: int = 1
         date: str = time.strftime("%Y%m%d")
         id: str = f"{date}_TRAIN_{str(i).zfill(3)}"
-        path: str = f"{self.weightsDir}{id}/"
+        path: str = f"{weightsDir}{id}/"
         while os.path.exists(path):
             i += 1
             id = f"{date}_TRAIN_{str(i).zfill(3)}"
-            path = f"{self.weightsDir}{id}/"
+            path = f"{weightsDir}{id}/"
         self.__trainDir = path
         return id
     
@@ -68,8 +81,8 @@ class Trainer:
             running_loss = 0.0
             i = 1
             for images, labels in self.__dataLoader:
-                dotEnd = "."*i+" "*(3-i)
-                print(f"\rEpoch {epochStr}/{epochs} - Training", end=dotEnd+"\t\n", flush=True)
+                dotEnd = "."*i + " "*(3-i) + " "
+                print(f"\rEpoch {epochStr}/{epochs} - Training", end=dotEnd, flush=True)
                 i = (i % 3) + 1
                 self.__optimizer.zero_grad()
                 outputs = self.__model(images)
@@ -85,6 +98,9 @@ class Trainer:
                 lessLoss = running_loss
                 epochWithLessLoss = epoch
                 bestEpochPath = epochPath
+            if running_loss/len(self.__dataLoader) < 0.005:
+                print("Loss is too low! Stopping training...")
+                break
         
         print(f"Training finished! Best epoch: {epochWithLessLoss+1}")
         print("Saving it...")
