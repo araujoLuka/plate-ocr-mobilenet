@@ -10,7 +10,7 @@ class LicensePlateDataset(Dataset):
     def __init__(self, image_folder, transform=plateModelTransform):
         self.image_folder = image_folder
         self.transform = transform
-        self.images = os.listdir(image_folder)
+        self.images = self.__listimages(image_folder)
         self.classes = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         self.class_to_idx = {cls: idx for idx, cls in enumerate(self.classes)}
 
@@ -24,3 +24,11 @@ class LicensePlateDataset(Dataset):
         label_idx = self.class_to_idx[label]  # Convertendo label para índice numérico
         image = self.transform(image)
         return image, tensor(label_idx)  # Convertendo label para tensor
+
+    def __listimages(self, image_folder: str) -> list[str]:
+        images = os.listdir(image_folder)
+        cp_images = images.copy()
+        for img in cp_images:
+            if not img.endswith('.jpeg') and not img.endswith('.jpg'):
+                images.remove(img)
+        return images
