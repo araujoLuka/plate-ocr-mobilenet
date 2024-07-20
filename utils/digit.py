@@ -5,12 +5,18 @@ __version__ = "1.0.0"
 
 import os
 import argparse
+from typing import Literal
 from PIL import Image
 
-verbose: bool = False
-def print(*args, **kwargs):
+verbose: bool = True
+def vprint(
+    *values: object,
+    sep: str | None = " ",
+    end: str | None = "\n",
+    flush: Literal[False] = False,
+    ) -> None:
     if verbose:
-        print(args, kwargs)
+        print(*values, sep=sep, end=end, flush=flush)
 
 class DigitExtractor:
     def __init__(
@@ -60,7 +66,7 @@ class DigitExtractor:
     def save(self, 
              file_path: str = "",
              directory: str = "./",
-             override: bool = True,
+             override: bool = False,
              format: str = "jpeg",
              gen_path: bool = True) -> str:
         """
@@ -90,10 +96,11 @@ class DigitExtractor:
     def __is_number(self) -> bool:
         """Check if the digit is a number based on image path"""
         image_path = self.__image_path.split("/")[-1]
-        if self.__has_hyphen:
-            image_path = image_path.strip("-")
+        offset = 0
+        if self.__index >= 4 and self.__has_hyphen:
+            offset = 1
         image_path = image_path.split(".")[0]
-        digit = image_path[self.__index - 1]
+        digit = image_path[self.__index - 1 + offset]
         return digit.isnumeric()
        
     def __extract_digit(self) -> Image.Image:
@@ -106,11 +113,6 @@ class DigitExtractor:
         """
         image = Image.open(self.__image_path)
         width, height = image.size
-
-        # Rotate if the image is in portrait mode
-        if height > width:
-            image = image.rotate(90, expand=True)
-            width, height = image.size
 
         # Calculate the width of the digit
         digit_width = width // (self.__plate_length + 1)
@@ -152,6 +154,10 @@ class DigitExtractor:
         """Return a generated path for the digit"""
         plate_name = self.__image_path.split("/")[-1].split(".")[0]
         file_path = self.__gen_filename(directory, plate_name, format)
+        i = 2
+        while os.path.exists(file_path):
+            file_path = self.__gen_filename(directory, plate_name, format, i)
+            i += 1
         
         return file_path
 
@@ -193,7 +199,7 @@ if __name__ == "__main__":
                         number_only=number_only,
                         letter_only=letter_only)
         except Exception as e:
-            print(f"Error extracting digit {i}: {e}")
+            vprint(f"Error extracting digit {i}: {e}")
             continue
         saved_path = ""
 
@@ -209,4 +215,4 @@ if __name__ == "__main__":
                 saved_path = digit.save(file_path=args.save_path, 
                                         directory=args.save_dir, gen_path=False, override=True)
         
-        print(f"Digit {i} saved at: {saved_path}")
+        vprint(f"Digit {i} saved at: {saved_path}")
