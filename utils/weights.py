@@ -24,6 +24,9 @@ def weights_list():
 
     # Sort the list by name
     weights.sort()
+
+    # Add custom model option
+    weights.append("Use a custom model")
     
     print("Available weights:")
     for idx, model in enumerate(weights):
@@ -36,8 +39,14 @@ def weights_select(weight: list) -> tuple[str, int]:
     if inp == 0:
         print("Select skipped!")
         return "", 1
-    elif inp > 0 and inp <= len(weight):
+    elif inp > 0 and inp < len(weight):
         return weightsDir + weight[inp-1], 0
+    elif inp == len(weight):
+        inp = input("Enter the path to the model: ")
+        if not os.path.exists(inp):
+            print("Invalid path! Skipping...")
+            return "", -1
+        return inp, 0
 
     print("Invalid input!")
     return "", -1
