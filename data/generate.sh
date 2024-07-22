@@ -1,16 +1,19 @@
 #!/bin/bash
 
-# Diretório contendo as imagens das placas
-SOURCE_DIR="/home/lucas/Downloads/placas/"
-BASE_DIR="../assets/images"
-TRAIN_DIR=$BASE_DIR"/train/"
-NUMBERS_DIR=$TRAIN_DIR"numbers/"
-LETTERS_DIR=$TRAIN_DIR"letters/"
-VAL_DIR=$BASE_DIR"/val"
-DIGIT_SCRIPT="../utils/digit.py"
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-VAL_COUNT=100
-TRAIN_COUNT=$((VAL_COUNT * 3))
+# Diretório contendo as imagens das placas
+SOURCE_DIR="/home/lucas/Downloads/placas"
+
+BASE_DIR=$SCRIPT_DIR"/../assets/images"
+TRAIN_DIR=$BASE_DIR"/train"
+NUMBERS_DIR=$TRAIN_DIR"/numbers"
+LETTERS_DIR=$TRAIN_DIR"/letters"
+VAL_DIR=$BASE_DIR"/val"
+DIGIT_SCRIPT=$SCRIPT_DIR"/../utils/digit.py"
+
+VAL_COUNT=200
+TRAIN_COUNT=$((VAL_COUNT + 1))
 
 # Cria os diretórios de treino e avaliação se não existirem
 mkdir -p $TRAIN_DIR
@@ -24,7 +27,7 @@ shuf -n ${#IMAGES[@]} -e "${IMAGES[@]}" -o shuffled_images.txt
 
 # Pega os primeiros VAL_COUNT arquivos para avaliação e o restante para treino
 head -n $VAL_COUNT shuffled_images.txt > val_images.txt
-tail -n $TRAIN_COUNT shuffled_images.txt > train_images.txt
+tail -n +$TRAIN_COUNT shuffled_images.txt > train_images.txt
 
 copy_images() {
     local image_list=$1
