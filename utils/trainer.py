@@ -36,7 +36,7 @@ class Trainer:
         self.__trainId = value
         self.__trainDir = f"{weightsDir}{value}/"
         if os.path.exists(self.__trainDir):
-            print(f"Train ID {value} already exists! Changing it...")
+            print(f"\rTrain ID {value} already exists! Creating another...", end=" ")
             self.trainId = value[:-3] + str(int(value[-3:])+1).zfill(3)
 
     def generateTrainId(self) -> str:
@@ -90,15 +90,27 @@ class Trainer:
                 loss.backward()
                 self.__optimizer.step()
                 running_loss += loss.item()
+
             if self.saveEpochs:
                 epochPath = self.__model.save(epoch=epoch+1, dirpath=self.__trainDir)
-            print(f"\rEpoch {epochStr}/{epochs} - Training done", flush=True)
+
+            print(f"\rEpoch {epochStr}/{epochs} - Training done\t\t\t\t\t", flush=True)
             print(f"Loss: {running_loss/len(self.__dataLoader)}")
+            lr = self.__optimizer.param_groups[0]['lr']
+            print(f"Learning rate: {lr:.6f}")
+            lr *= 0.9
+            lr = float(f"{lr:.6f}") # Truncate to 6 decimal
+            lr = max(lr, 0.00001)
+            for param_group in self.__optimizer.param_groups:
+                param_group['lr'] = lr
+            print(f"Rate updated: {lr:.6f}")
+
             if running_loss < lessLoss:
                 lessLoss = running_loss
                 epochWithLessLoss = epoch
                 bestEpochPath = epochPath
-            if running_loss/len(self.__dataLoader) < 0.005:
+
+            if running_loss/len(self.__dataLoader) < 0.001:
                 print("Loss is too low! Stopping training...")
                 break
         
