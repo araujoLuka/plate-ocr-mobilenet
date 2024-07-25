@@ -2,76 +2,87 @@
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-# Diretório contendo as imagens das placas
-SOURCE_DIR="/home/lucas/Downloads/placas"
+VAL_SOURCE_DIR="/home/lucas/Downloads/placas"
+TRAIN_SOURCE_DIR="/home/lucas/Downloads/ocr_train"
 
 BASE_DIR=$SCRIPT_DIR"/../assets/images"
 TRAIN_DIR=$BASE_DIR"/train"
-NUMBERS_DIR=$TRAIN_DIR"/numbers"
-LETTERS_DIR=$TRAIN_DIR"/letters"
+NUMBERS_DIR=$TRAIN_DIR"_numbers"
+LETTERS_DIR=$TRAIN_DIR"_letters"
 VAL_DIR=$BASE_DIR"/val"
 DIGIT_SCRIPT=$SCRIPT_DIR"/../utils/digit.py"
 
-VAL_COUNT=200
 TRAIN_COUNT=$((VAL_COUNT + 1))
 
-# Cria os diretórios de treino e avaliação se não existirem
+# Clear previous data
+rm -rf $BASE_DIR
+
 mkdir -p $TRAIN_DIR
 mkdir -p $VAL_DIR
+mkdir -p $NUMBERS_DIR
+mkdir -p $LETTERS_DIR
 
-# Lista todas as imagens no diretório de origem
-declare -a IMAGES=($(find $SOURCE_DIR -type f -name "*.jpg"))
+declare -a VAL_IMAGES=($(find $VAL_SOURCE_DIR -type f -name "*.jpg"))
+declare -a TRAIN_IMAGES=($(find $TRAIN_SOURCE_DIR -type f -name "*.png"))
 
-# Embaralha a lista de imagens
-shuf -n ${#IMAGES[@]} -e "${IMAGES[@]}" -o shuffled_images.txt
-
-# Pega os primeiros VAL_COUNT arquivos para avaliação e o restante para treino
-head -n $VAL_COUNT shuffled_images.txt > val_images.txt
-tail -n +$TRAIN_COUNT shuffled_images.txt > train_images.txt
-
-copy_images() {
-    local image_list=$1
-    local output_dir=$2
-    while IFS= read -r image; do
-        cp "$image" $output_dir
-    done < "$image_list"
-}
-
-# Função para processar as imagens usando digit.py
-process_images() {
-    local image_list=$1
-    local output_dir=$2
-    local extra_args=${3:-""}
-
-    while IFS= read -r image; do
-        if [ ! -z "$extra_args" ]; then
-            python3 $DIGIT_SCRIPT --save-dir "$output_dir" --all "$extra_args" "$image"
-        else
-            python3 $DIGIT_SCRIPT --save-dir "$output_dir" --all "$image"
-        fi
-    done < "$image_list"
-}
-
-# Processa as imagens de treino
-echo "Processing training images..."
-process_images "train_images.txt" $TRAIN_DIR
-echo "Finished! Total images: $(ls $TRAIN_DIR | wc -l)"
-
-# Processa numeros e letras separadamente
-echo "Processing training images (numbers only)..."
-process_images "train_images.txt" $NUMBERS_DIR "--number-only"
-echo "Finished! Total images: $(ls $NUMBERS_DIR | wc -l)"
-
-echo "Processing training images (letters only)..."
-process_images "train_images.txt" $LETTERS_DIR "--letter-only"
-echo "Finished! Total images: $(ls $LETTERS_DIR | wc -l)"
-
-# Processa as imagens de avaliação
-echo "Processing validation images..."
-copy_images "val_images.txt" $VAL_DIR
+echo "Copying validation images..."
+cp -r "${VAL_IMAGES[@]}" $VAL_DIR
 echo "Finished! Total images: $(ls $VAL_DIR | wc -l)"
 
-# Limpa os arquivos temporários
-rm shuffled_images.txt train_images.txt val_images.txt
+# Training images are in sub-dirs
+# - There is two datasets: data and data2
+# - Each dataset has a sub-dir named 'training_data'
+# - Inside 'training_data' there are sub-dirs for each label
+# - Only the lastest sub-dirs need to be copied
+echo "Copying training images..."
+
+TRAIN_COUNT=0
+NUMBERS_COUNT=0
+LETTERS_COUNT=0
+# For each dataset
+for dataset_dir in $(ls -d $TRAIN_SOURCE_DIR/*/)
+do
+    echo "Processing $dataset_dir..."
+
+    # Access the 'training_data' dir
+    training_data_dir=$dataset_dir"training_data/"
+
+    # Store dataset length
+    DATASET_COUNT=0
+
+    # For each label
+    # - Create a sub-dir in the training dir
+    # - Copy all images to the sub-dir
+    # - Count them and add to the total
+    for label_dir in $(ls -d $training_data_dir*/)
+    do
+        declare -a IMAGES=($(find $label_dir -type f -name "*.png"))
+        TRAIN_COUNT=$((TRAIN_COUNT + ${#IMAGES[@]}))
+        DATASET_COUNT=$((DATASET_COUNT + ${#IMAGES[@]}))
+        LABEL_DIR=$TRAIN_DIR"/"$(basename $label_dir)
+        mkdir -p $LABEL_DIR
+        cp -r "${IMAGES[@]}" $LABEL_DIR
+
+        # Check if the label is a number or a letter
+        if [[ $(basename $label_dir) =~ ^[0-9]+$ ]]; then
+            LABEL_DIR=$NUMBERS_DIR"/"$(basename $label_dir)
+            mkdir -p $LABEL_DIR
+            cp -r "${IMAGES[@]}" $LABEL_DIR
+            NUMBERS_COUNT=$((NUMBERS_COUNT + ${#IMAGES[@]}))
+        else
+            LABEL_DIR=$LETTERS_DIR"/"$(basename $label_dir)
+            mkdir -p $LABEL_DIR
+            cp -r "${IMAGES[@]}" $LABEL_DIR
+            LETTERS_COUNT=$((LETTERS_COUNT + ${#IMAGES[@]}))
+        fi
+    done
+
+    echo "Finished! Total images from $dataset_dir: $DATASET_COUNT"
+done
+
+echo "Finished!"
+echo "> Total training images: $TRAIN_COUNT" "Saved in $TRAIN_DIR"
+echo "> Total number images: $NUMBERS_COUNT" "Saved in $NUMBERS_DIR"
+echo "> Total letter images: $LETTERS_COUNT" "Saved in $LETTERS_DIR"
 
 echo "Datasets created successfully!"

@@ -8,13 +8,13 @@ import argparse
 from typing import Literal
 from PIL import Image
 
-verbose: bool = True
+verbose: bool = False
 def vprint(
-    *values: object,
-    sep: str | None = " ",
-    end: str | None = "\n",
-    flush: Literal[False] = False,
-    ) -> None:
+        *values: object,
+        sep: str | None = " ",
+        end: str | None = "\n",
+        flush: Literal[False] = False,
+        ) -> None:
     if verbose:
         print(*values, sep=sep, end=end, flush=flush)
 

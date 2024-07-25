@@ -3,16 +3,17 @@
 __author__ = "Lucas C. Araujo"
 
 import os
-from torch import nn, save, load
+from torch import nn, save, load, cuda
 from torchvision.models import MobileNetV3, MobileNet_V3_Small_Weights, WeightsEnum
 from torchvision.models import mobilenetv3
 
+from assets.metadata import CATEGORIES
 from utils.weights import *
 
 class LicensePlateModel(MobileNetV3):
     def __init__(
             self, 
-            numClasses:int = 36, 
+            numClasses:int = len(CATEGORIES),
             customPreTrained: bool = False,
             preTrainedPath: str = ""):
         """
@@ -48,6 +49,8 @@ class LicensePlateModel(MobileNetV3):
         # After loaded the model, change the last layer to match the number of classes
         self.classifier[3] = nn.Linear(self.classifier[3].in_features, numClasses)
 
+        self.numClasses: int = numClasses
+
         # Load a pre-trained model if the user wants
         if customPreTrained:
             try:
@@ -55,6 +58,12 @@ class LicensePlateModel(MobileNetV3):
             except Exception as e:
                 print(f"Error loading pre-trained model: {e}")
                 print("Training from scratch...")
+
+        # Move the model to the GPU if available
+        self.on_gpu: bool = False
+        if cuda.is_available():
+            self.to('cuda')
+            self.on_gpu = True
      
     def save(self, filename: str = "model", epoch: int = -1, dirpath: str = "") -> str:
         """Save the model to a given path. 
@@ -92,8 +101,14 @@ class LicensePlateModel(MobileNetV3):
                 print(f"Loading model: {path}")
                 self.load_state_dict(load(path))
             except Exception as e:
-                print(f"Error loading model: {e}")
-                return
+                if "size mismatch" in str(e) and "torch.Size([36])" in str(e):
+                    print("Old model detected! Updating the last layer to match the number of classes...")
+                    self.classifier[3] = nn.Linear(self.classifier[3].in_features, self.numClasses - 1)
+                    self.load_state_dict(load(path))
+                    print("Old model loaded! Now adjusting the last layer...")
+                    self.classifier[3] = nn.Linear(self.classifier[3].in_features, self.numClasses)
+                else:
+                    raise Exception(f"Error loading pre-trained model: {e}")
         
         print("Pre-trained model loaded!")
     

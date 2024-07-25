@@ -2,7 +2,7 @@ import argparse
 from torch import nn, optim
 
 from utils.trainer import Trainer
-from data.dataset import LicensePlateDataset
+from data.dataset import OCRDataset
 from data.dataloader import LicensePlateDataLoader
 from models.plate import LicensePlateModel
 
@@ -13,19 +13,21 @@ if __name__ == "__main__":
     argParser.add_argument("--pre-trained", type=str, help="Path to a pre-trained model.", default="")
     argParser.add_argument("-e", "--epochs", type=int, help="Number of epochs to train the model.", default=10)
     argParser.add_argument("--skip-question", action="store_true", help="Skip the question to load a pre-trained model.", default=False)
+    argParser.add_argument("-r", "--rate", type=float, help="Learning rate for the optimizer.", default=0.0001)
+    argParser.add_argument("-q", "--quiet", action="store_true", help="Do not show verbose messages.", default=False)
     args = argParser.parse_args()
 
     trainDataPath = "./assets/images/train/"
     if args.letter:
-        trainDataPath = "./assets/images/train/letters/"
+        trainDataPath = "./assets/images/train_letters/"
     elif args.number:
-        trainDataPath = "./assets/images/train/numbers/"
+        trainDataPath = "./assets/images/train_numbers/"
 
     if args.letter and args.number:
         print("Invalid arguments! Please choose only one model to train.")
         exit()
 
-    dataset = LicensePlateDataset(trainDataPath)
+    dataset = OCRDataset(trainDataPath)
     dataloader = LicensePlateDataLoader(dataset)
 
     preTrainedPath = args.pre_trained
@@ -43,9 +45,9 @@ if __name__ == "__main__":
 
     model = LicensePlateModel(customPreTrained=usePretrained, preTrainedPath=preTrainedPath)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.0001)
+    optimizer = optim.Adam(model.parameters(), lr=args.rate)
 
-    trainer = Trainer(model, criterion, optimizer, dataloader)
+    trainer = Trainer(model, criterion, optimizer, dataloader, verbose=not args.quiet)
     modelSaveName = "model"
     trainer.saveEpochs = True
     if args.number:

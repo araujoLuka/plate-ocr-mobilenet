@@ -1,18 +1,19 @@
 """Dataset class for License Plate Recognition project."""
 
 import os
-from torch import tensor
+from torch import cuda, tensor
 from torch.utils.data import Dataset
 from PIL import Image
-from utils.transforms import plateModelTransform
+from assets.metadata import CLASS_TO_IDX, CATEGORIES
+from utils.transforms import baseTransform 
 
-class LicensePlateDataset(Dataset):
-    def __init__(self, image_folder, transform=plateModelTransform):
+class OCRDataset(Dataset):
+    def __init__(self, image_folder, transform=baseTransform):
         self.image_folder = image_folder
         self.transform = transform
         self.images = self.__listimages(image_folder)
-        self.classes = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        self.class_to_idx = {cls: idx for idx, cls in enumerate(self.classes)}
+        self.classes = CATEGORIES
+        self.class_to_idx = CLASS_TO_IDX
 
     def __len__(self):
         return len(self.images)
@@ -20,15 +21,18 @@ class LicensePlateDataset(Dataset):
     def __getitem__(self, idx):
         img_name = os.path.join(self.image_folder, self.images[idx])
         image = Image.open(img_name).convert('RGB')
-        label = self.images[idx].split('_')[0]  # Assumindo que o nome do arquivo é "label_xxx.jpg"
-        label_idx = self.class_to_idx[label]  # Convertendo label para índice numérico
+        label = self.images[idx].split('/')[0]  # Filename is "<l>/xxx.png" where l is the char
+        label_idx = self.class_to_idx[label]
         image = self.transform(image)
-        return image, tensor(label_idx)  # Convertendo label para tensor
+        tensor_label = tensor(label_idx)
+        return image, tensor_label
 
     def __listimages(self, image_folder: str) -> list[str]:
-        images = os.listdir(image_folder)
-        cp_images = images.copy()
-        for img in cp_images:
-            if not img.endswith('.jpeg') and not img.endswith('.jpg'):
-                images.remove(img)
+        # Training images are in subfolders named after the class
+        classDirs = [d for d in os.listdir(image_folder) if os.path.isdir(os.path.join(image_folder, d))]
+        images = []
+        for d in classDirs:
+            for f in os.listdir(os.path.join(image_folder, d)):
+                if f.endswith('.png'):
+                    images.append(f'{d}/{f}')
         return images
